@@ -6,12 +6,13 @@ import TicketCard from '../components/TicketCard'
 import TicketForm from '../components/TicketForm'
 import { format } from 'date-fns'
 
-const StudentPortal = ({ user }) => {
+const StudentPortal = ({ user, onAddNotification }) => {
   const [tickets, setTickets] = useState(initialTickets)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [filterStatus, setFilterStatus] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTicket, setSelectedTicket] = useState(null)
+  const [viewScope, setViewScope] = useState('mine') // 'mine' or 'all'
 
   const handleCreateTicket = (ticketData) => {
     const newTicket = {
@@ -25,11 +26,20 @@ const StudentPortal = ({ user }) => {
     }
 
     setTickets([newTicket, ...tickets])
+    
+    // Add notification for ticket creation
+    if (onAddNotification) {
+      onAddNotification(
+        'Ticket Created',
+        `Your ticket "${ticketData.title}" has been created successfully`
+      )
+    }
   }
 
   const myTickets = tickets.filter((ticket) => ticket.studentId === user.id)
+  const displayedTickets = viewScope === 'all' ? tickets : myTickets
 
-  const filteredTickets = myTickets.filter((ticket) => {
+  const filteredTickets = displayedTickets.filter((ticket) => {
     const matchesStatus = filterStatus === 'all' || ticket.status === filterStatus
     const matchesSearch =
       ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -39,10 +49,10 @@ const StudentPortal = ({ user }) => {
   })
 
   const stats = {
-    total: myTickets.length,
-    pending: myTickets.filter((t) => t.status === 'pending').length,
-    inProgress: myTickets.filter((t) => t.status === 'in-progress').length,
-    resolved: myTickets.filter((t) => t.status === 'resolved').length,
+    total: displayedTickets.length,
+    pending: displayedTickets.filter((t) => t.status === 'pending').length,
+    inProgress: displayedTickets.filter((t) => t.status === 'in-progress').length,
+    resolved: displayedTickets.filter((t) => t.status === 'resolved').length,
   }
 
   return (
@@ -54,16 +64,33 @@ const StudentPortal = ({ user }) => {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">My Tickets</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+              {viewScope === 'all' ? 'All Tickets' : 'My Tickets'}
+            </h1>
             <p className="text-gray-600">Track and manage your support requests</p>
           </div>
-          <button
-            onClick={() => setIsFormOpen(true)}
-            className="btn-primary"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            New Ticket
-          </button>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setViewScope('mine')}
+              className={`btn-secondary ${viewScope === 'mine' ? 'btn-primary' : ''}`}
+            >
+              My Tickets
+            </button>
+            <button
+              onClick={() => setViewScope('all')}
+              className={`btn-secondary ${viewScope === 'all' ? 'btn-primary' : ''}`}
+            >
+              View All Tickets
+            </button>
+            <button
+              onClick={() => setIsFormOpen(true)}
+              className="btn-primary ml-2"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              New Ticket
+            </button>
+          </div>
         </div>
       </motion.div>
 
@@ -181,11 +208,11 @@ const StudentPortal = ({ user }) => {
           >
             <Ticket className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <p className="text-gray-600 mb-2">
-              {myTickets.length === 0
+              {viewScope === 'mine' && myTickets.length === 0
                 ? 'You have not created any tickets yet.'
                 : 'No tickets found matching your filters.'}
             </p>
-            {myTickets.length === 0 && (
+            {viewScope === 'mine' && myTickets.length === 0 && (
               <button
                 onClick={() => setIsFormOpen(true)}
                 className="btn-primary mt-4"
